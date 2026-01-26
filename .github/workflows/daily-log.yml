@@ -1,0 +1,43 @@
+name: Auto update learning log
+
+on:
+  schedule:
+    # 每周一、二、四、五的 UTC 13:00 运行
+    - cron: "0 13 * * 1,2,4,5"
+  workflow_dispatch: {}
+
+jobs:
+  update-log:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set git info
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Update learning log
+        run: |
+          LOG_FILE="learning-log.md"
+          # 如果文件不存在就创建一个简单标题
+          if [ ! -f "$LOG_FILE" ]; then
+            echo "# Learning Log" > "$LOG_FILE"
+            echo "" >> "$LOG_FILE"
+          fi
+
+          TODAY=$(date -u +"%Y-%m-%d")
+
+          # 已经有今天的记录就不再重复提交
+          if grep -q "$TODAY" "$LOG_FILE"; then
+            echo "Entry for $TODAY already exists. Skip."
+            exit 0
+          fi
+
+          echo "- $TODAY: 待填写的小笔记" >> "$LOG_FILE"
+
+          git add "$LOG_FILE"
+          git commit -m "chore: log $TODAY" || exit 0
+          git push
