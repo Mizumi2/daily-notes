@@ -1,2 +1,0 @@
-# daily-notes
-0
