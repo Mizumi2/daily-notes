@@ -1,0 +1,44 @@
+name: Auto update learning log
+
+on:
+  schedule:
+    - cron: "17 13 * * *"
+    - cron: "41 16 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate probabilistic log entry
+        env:
+          LOG_FILE: "learning-log.md"
+          STATE_FILE: ".cache/activity_state.json"
+          RUN_SLOT: "${{ github.event.schedule }}"
+        run: |
+          python scripts/probabilistic_log.py
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git add learning-log.md .cache/activity_state.json
+          git commit -m "chore: probabilistic log update"
+          git push
